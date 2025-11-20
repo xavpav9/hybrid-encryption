@@ -2,7 +2,8 @@ from primeModulusHandler import PrimeModulusHandler
 
 class AesEncryption:
     def __init__(self):
-         self._primeModulusHandler= PrimeModulusHandler()
+        self._primeModulusHandler= PrimeModulusHandler()
+        self.rcon = [1,2,4,8,16,32,64,128,27,54]
 
     def rijndael_sbox(self, num):
         if num == 0: return 99 # special case
@@ -64,4 +65,36 @@ class AesEncryption:
                 resultant_block[row].append(self.rijndael_inverse_sbox(block[row][i]))
         return resultant_block
 
+    def next_key(self, block, rcon):
+        resultant_block = [[],[],[],[]]
+        column_data = []
+        for i in range(4):
+            column_data.append([row[i] for row in block])
+
+        subbed_column_data = []
+        for i in range(4):
+            subbed_column_data.append(self.rijndael_sbox(column_data[3][(i + 1) % 4]))
+
+        first_col = []
+        for i in range(4):
+            resultant_block[i].append(self._primeModulusHandler.xor(self._primeModulusHandler.xor(column_data[0][i], subbed_column_data[i]), rcon[i]))
+
+
+        for col in range(1,4):
+            for i in range(4):
+                resultant_block[i].append(self._primeModulusHandler.xor(column_data[col][i], resultant_block[i][col-1]))
+
+        return resultant_block
+
+
+
+"""tests:
 aes = AesEncryption()
+
+b1 = [[43,40,171,9],[126,174,247,207],[21,210,21,79],[22,166,136,60]]
+
+for i in range(10):
+    b1 = aes.next_key(b1, [aes.rcon[i], 0, 0, 0])
+
+print(b1)
+"""
