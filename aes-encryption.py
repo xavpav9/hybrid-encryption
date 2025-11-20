@@ -18,8 +18,6 @@ class AesEncryption:
         inv_num = self._primeModulusHandler.get_denary(self._primeModulusHandler.affine_transformation(A, num, b))
         return self._primeModulusHandler.multiplicative_inverse_in_gf8(inv_num)
 
-
-
     def mix_columns(self, block):
         matrix = [[2,3,1,1],[1,2,3,1],[1,1,2,3],[3,1,1,2]]
         resultant_block = [[],[],[],[]]
@@ -43,8 +41,18 @@ class AesEncryption:
                 resultant_block[row].append(block[row][(i + row) % 4])
         return resultant_block
 
-aes = AesEncryption()
-p = PrimeModulusHandler()
-num = p.get_denary("00111111")
-print(aes.rijndael_inverse_sbox(num))
+    def sub_bytes(self, block):
+        resultant_block = [[],[],[],[]]
+        for row in range(4):
+            for i in range(4):
+                resultant_block[row].append(self.rijndael_sbox(block[row][i]))
+        return resultant_block
 
+    def inverse_sub_bytes(self, block):
+        resultant_block = [[],[],[],[]]
+        for row in range(4):
+            for i in range(4):
+                resultant_block[row].append(self.rijndael_inverse_sbox(block[row][i]))
+        return resultant_block
+
+aes = AesEncryption()
