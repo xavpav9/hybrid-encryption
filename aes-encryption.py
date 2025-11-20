@@ -20,8 +20,16 @@ class AesEncryption:
 
         return resultant_block
 
+    def shift_rows(self, block):
+        resultant_block = [[],[],[],[]]
+        for row in range(4):
+            for i in range(4):
+                resultant_block[row].append(block[row][(i + row) % 4])
+        return resultant_block
 
 aes = AesEncryption()
 
 # tests:
-# print(aes.mix_columns([[212, 224, 184, 30], [191, 180, 65, 39], [93, 82, 17, 152], [48, 174, 241, 229]]))
+# block = [[212, 224, 184, 30], [191, 180, 65, 39], [93, 82, 17, 152], [48, 174, 241, 229]]
+# print(aes.mix_columns(block))
+# print(aes.shift_rows(block))
