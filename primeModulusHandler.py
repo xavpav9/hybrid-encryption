@@ -4,7 +4,7 @@ class PrimeModulusHandler:
     def get_bit_pattern(self, denary, zerofill=8):
         highest = 0
         if denary == 0:
-            return "0"
+            return "0".zfill(zerofill)
 
         while denary // (2 ** highest) > 1:
             highest += 1
@@ -157,3 +157,22 @@ class PrimeModulusHandler:
 
         return resultant_den
 
+    def multiplicative_inverse_in_gf8(self, num):
+        if num == 0:
+            return 0
+        for possible_inverse in range(1, 256):
+            if self.multiply_in_gf8(num, possible_inverse) == 1:
+                return possible_inverse
+
+    def affine_transformation(self, A, num, b):
+        bin = self.get_bit_pattern(num)[::-1]
+        resultant_bit_pattern = ""
+        for row in A:
+            resultant_bit = 0
+            for i in range(8):
+                if row[i] == 1:
+                    resultant_bit = self.xor(resultant_bit, int(bin[i]))
+            resultant_bit_pattern += str(resultant_bit)
+        resultant_num = self.get_denary(resultant_bit_pattern)
+
+        return self.get_bit_pattern(self.xor(resultant_num, self.get_denary(b)))[::-1]

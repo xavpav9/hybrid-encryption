@@ -4,6 +4,22 @@ class AesEncryption:
     def __init__(self):
          self._primeModulusHandler= PrimeModulusHandler()
 
+    def rijndael_sbox(self, num):
+        if num == 0: return 99 # special case
+        A = [[1,0,0,0,1,1,1,1],[1,1,0,0,0,1,1,1],[1,1,1,0,0,0,1,1],[1,1,1,1,0,0,0,1],[1,1,1,1,1,0,0,0],[0,1,1,1,1,1,0,0],[0,0,1,1,1,1,1,0],[0,0,0,1,1,1,1,1]]
+        b = "11000110"
+        inv_num = self._primeModulusHandler.multiplicative_inverse_in_gf8(num)
+        return self._primeModulusHandler.get_denary(self._primeModulusHandler.affine_transformation(A, inv_num, b))
+
+    def rijndael_inverse_sbox(self, num):
+        if num == 99: return 0 # special case
+        A = [[0,0,1,0,0,1,0,1],[1,0,0,1,0,0,1,0],[0,1,0,0,1,0,0,1],[1,0,1,0,0,1,0,0],[0,1,0,1,0,0,1,0],[0,0,1,0,1,0,0,1],[1,0,0,1,0,1,0,0],[0,1,0,0,1,0,1,0]]
+        b = "10100000"
+        inv_num = self._primeModulusHandler.get_denary(self._primeModulusHandler.affine_transformation(A, num, b))
+        return self._primeModulusHandler.multiplicative_inverse_in_gf8(inv_num)
+
+
+
     def mix_columns(self, block):
         matrix = [[2,3,1,1],[1,2,3,1],[1,1,2,3],[3,1,1,2]]
         resultant_block = [[],[],[],[]]
@@ -28,8 +44,7 @@ class AesEncryption:
         return resultant_block
 
 aes = AesEncryption()
+p = PrimeModulusHandler()
+num = p.get_denary("00111111")
+print(aes.rijndael_inverse_sbox(num))
 
-# tests:
-# block = [[212, 224, 184, 30], [191, 180, 65, 39], [93, 82, 17, 152], [48, 174, 241, 229]]
-# print(aes.mix_columns(block))
-# print(aes.shift_rows(block))
