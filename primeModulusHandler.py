@@ -120,3 +120,40 @@ class PrimeModulusHandler:
 
         return [current_x, current_y, current_r] # [x, y, gcd]
 
+    def xor(self, num1, num2):
+        bin1 = self.get_bit_pattern(num1, 0)
+        bin2 = self.get_bit_pattern(num2, len(bin1))
+        bin1 = bin1.zfill(len(bin2))
+        resultant_bin = ""
+
+        for i in range(len(bin1)):
+            if bin1[i] == bin2[i]: resultant_bin += "0"
+            else: resultant_bin += "1"
+
+        return self.get_denary(resultant_bin)
+
+    def multiply_in_gf8(self, num1, num2): # in GF(2^8)
+        reducer = 283 # #11b
+        resultant_den = num1
+
+        order = []
+        while num2 != 1:
+            if num2 % 2 == 0:
+                order.append(1)
+                num2 //= 2
+            else:
+                order.append(0)
+                num2 -= 1
+
+        order = order[::-1]
+        for operation in order:
+            if operation == 1:
+                resultant_den *= 2
+                if resultant_den > 255:
+                    resultant_den = self.xor(resultant_den, reducer)
+
+            else:
+                resultant_den = self.xor(resultant_den, num1)
+
+        return resultant_den
+
