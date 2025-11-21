@@ -20,19 +20,25 @@ class PrimeModulusHandler:
 
         return binary.zfill(zerofill)
 
-    def get_denary(self, binary):
-        return sum([int(binary[len(binary) - i - 1]) * (2 ** i) for i in range(len(binary))])
+    def number_of_bits(self, denary):
+        if denary == 0: return 1
+        else: total_bits = 0
 
+        while denary != 0:
+            denary >>= 1
+            total_bits += 1
+
+        return total_bits
 
     def reduce_exponential_modulo(self, base, power, modulus):
-        binary = self.get_bit_pattern(power)
         partial_product = 1
         f = base % modulus
 
-        for bit in list(binary[::-1]):
-            if bit == "1":
+        while power > 0:
+            if power % 2 == 1:
                 partial_product = (partial_product * f) % modulus
             f = (f ** 2) % modulus
+            power >>= 1
 
         return partial_product
 
@@ -120,18 +126,6 @@ class PrimeModulusHandler:
 
         return [current_x, current_y, current_r] # [x, y, gcd]
 
-    def xor(self, num1, num2):
-        bin1 = self.get_bit_pattern(num1, 0)
-        bin2 = self.get_bit_pattern(num2, len(bin1))
-        bin1 = bin1.zfill(len(bin2))
-        resultant_bin = ""
-
-        for i in range(len(bin1)):
-            if bin1[i] == bin2[i]: resultant_bin += "0"
-            else: resultant_bin += "1"
-
-        return self.get_denary(resultant_bin)
-
     def multiply_in_gf8(self, num1, num2): # in GF(2^8)
         reducer = 283 # #11b
         resultant_den = num1
@@ -150,10 +144,9 @@ class PrimeModulusHandler:
             if operation == 1:
                 resultant_den *= 2
                 if resultant_den > 255:
-                    resultant_den = self.xor(resultant_den, reducer)
-
+                    resultant_den = resultant_den ^ reducer
             else:
-                resultant_den = self.xor(resultant_den, num1)
+                resultant_den = resultant_den ^ num1
 
         return resultant_den
 
@@ -165,14 +158,15 @@ class PrimeModulusHandler:
                 return possible_inverse
 
     def affine_transformation(self, A, num, b):
-        bin = self.get_bit_pattern(num)[::-1]
-        resultant_bit_pattern = ""
-        for row in A:
+        resultant_num = 0
+        for row in range(len(A)):
+            current_num = num
             resultant_bit = 0
             for i in range(8):
-                if row[i] == 1:
-                    resultant_bit = self.xor(resultant_bit, int(bin[i]))
-            resultant_bit_pattern += str(resultant_bit)
-        resultant_num = self.get_denary(resultant_bit_pattern)
+                current_bit = current_num % 2
+                if A[row][i] == 1:
+                    resultant_bit = resultant_bit ^ current_bit
+                current_num >>= 1
+            resultant_num ^= (resultant_bit << row)
 
-        return self.get_bit_pattern(self.xor(resultant_num, self.get_denary(b)))[::-1]
+        return resultant_num ^ int(b[::-1], 2)

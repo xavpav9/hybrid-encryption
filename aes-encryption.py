@@ -1,4 +1,4 @@
-import sys
+import datetime
 from primeModulusHandler import PrimeModulusHandler
 
 class AesEncryption:
@@ -7,15 +7,22 @@ class AesEncryption:
         self.rcon = [1,2,4,8,16,32,64,128,27,54]
 
         try:
-            if int(encoding) in [8, 16]:
+            if int(encoding) in [8, 16, 32]:
                 self.bits_per_letter = int(encoding)
                 self.letters_per_block = 128 // self.bits_per_letter
             else:
                 raise Exception()
         except:
-            raise Exception("Invalid AesEncryption instantiation - pick a value of bits from 8, 16 ( for now )")
+            raise Exception("Invalid AesEncryption instantiation - pick a value of bits from 8, 16, 32")
 
         self.set_key(key)
+
+        self.sbox = {}
+        self.inverse_sbox = {}
+        for i in range(256):
+            self.sbox[i] = self.rijndael_sbox(i)
+            self.inverse_sbox[i] = self.rijndael_inverse_sbox(i)
+
 
     def set_key(self, key): # key in ascii
         block = [[],[],[],[]]
@@ -30,13 +37,13 @@ class AesEncryption:
         A = [[1,0,0,0,1,1,1,1],[1,1,0,0,0,1,1,1],[1,1,1,0,0,0,1,1],[1,1,1,1,0,0,0,1],[1,1,1,1,1,0,0,0],[0,1,1,1,1,1,0,0],[0,0,1,1,1,1,1,0],[0,0,0,1,1,1,1,1]]
         b = "11000110"
         inv_num = self._primeModulusHandler.multiplicative_inverse_in_gf8(num)
-        return self._primeModulusHandler.get_denary(self._primeModulusHandler.affine_transformation(A, inv_num, b))
+        return self._primeModulusHandler.affine_transformation(A, inv_num, b)
 
     def rijndael_inverse_sbox(self, num):
         if num == 99: return 0 # special case
         A = [[0,0,1,0,0,1,0,1],[1,0,0,1,0,0,1,0],[0,1,0,0,1,0,0,1],[1,0,1,0,0,1,0,0],[0,1,0,1,0,0,1,0],[0,0,1,0,1,0,0,1],[1,0,0,1,0,1,0,0],[0,1,0,0,1,0,1,0]]
         b = "10100000"
-        inv_num = self._primeModulusHandler.get_denary(self._primeModulusHandler.affine_transformation(A, num, b))
+        inv_num = self._primeModulusHandler.affine_transformation(A, num, b)
         return self._primeModulusHandler.multiplicative_inverse_in_gf8(inv_num)
 
     def mix_columns(self, block, matrix=[[2,3,1,1],[1,2,3,1],[1,1,2,3],[3,1,1,2]]):
@@ -48,7 +55,7 @@ class AesEncryption:
                 values_to_be_summed = [self._primeModulusHandler.multiply_in_gf8(column_data[i], matrix_data[i]) for i in range(4)]
                 result = 0
                 for data in values_to_be_summed:
-                    result = self._primeModulusHandler.xor(result, data)
+                    result = result ^ data
 
                 resultant_block[row_number].append(result)
 
@@ -75,14 +82,14 @@ class AesEncryption:
         resultant_block = [[],[],[],[]]
         for row in range(4):
             for i in range(4):
-                resultant_block[row].append(self.rijndael_sbox(block[row][i]))
+                resultant_block[row].append(self.sbox[block[row][i]])
         return resultant_block
 
     def inverse_sub_bytes(self, block):
         resultant_block = [[],[],[],[]]
         for row in range(4):
             for i in range(4):
-                resultant_block[row].append(self.rijndael_inverse_sbox(block[row][i]))
+                resultant_block[row].append(self.inverse_sbox[block[row][i]])
         return resultant_block
 
     def next_key(self, block, rcon):
@@ -93,16 +100,16 @@ class AesEncryption:
 
         subbed_column_data = []
         for i in range(4):
-            subbed_column_data.append(self.rijndael_sbox(column_data[3][(i + 1) % 4]))
+            subbed_column_data.append(self.sbox[column_data[3][(i + 1) % 4]])
 
         first_col = []
         for i in range(4):
-            resultant_block[i].append(self._primeModulusHandler.xor(self._primeModulusHandler.xor(column_data[0][i], subbed_column_data[i]), rcon[i]))
+            resultant_block[i].append(column_data[0][i] ^ subbed_column_data[i] ^ rcon[i])
 
 
         for col in range(1,4):
             for i in range(4):
-                resultant_block[i].append(self._primeModulusHandler.xor(column_data[col][i], resultant_block[i][col-1]))
+                resultant_block[i].append(column_data[col][i] ^ resultant_block[i][col-1])
 
         return resultant_block
 
@@ -110,7 +117,7 @@ class AesEncryption:
         resultant_block = [[],[],[],[]]
         for row in range(4):
             for col in range(4):
-                resultant_block[row].append(self._primeModulusHandler.xor(block[row][col], round_key[row][col]))
+                resultant_block[row].append(block[row][col] ^ round_key[row][col])
         return resultant_block
 
     def encrypt(self, data):
@@ -133,7 +140,7 @@ class AesEncryption:
             block = [[],[],[],[]]
             for o in range(0, 128, 32):
                 for j in range(0, 32, 8):
-                    block[o // 32].append(self._primeModulusHandler.get_denary(bin[o+j:o+j+8]))
+                    block[o // 32].append(int(bin[o+j:o+j+8], 2))
 
             block = self.add_round_key(block, self.key)
             for round in range(9):
@@ -141,6 +148,7 @@ class AesEncryption:
                 block = self.shift_rows(block)
                 block = self.mix_columns(block)
                 block = self.add_round_key(block, round_keys[round])
+
             block = self.sub_bytes(block)
             block = self.shift_rows(block)
             block = self.add_round_key(block, round_keys[9])
@@ -172,7 +180,7 @@ class AesEncryption:
             block = [[],[],[],[]]
             for o in range(0, 128, 32):
                 for j in range(0, 32, 8):
-                    block[o // 32].append(self._primeModulusHandler.get_denary(bin[o+j:o+j+8]))
+                    block[o // 32].append(int(bin[o+j:o+j+8], 2))
 
             block = self.add_round_key(block, round_keys[9])
             block = self.inverse_shift_rows(block)
@@ -191,10 +199,20 @@ class AesEncryption:
                     decrypted_part += self._primeModulusHandler.get_bit_pattern(block[row][col])
             
             for o in range(0, 128, self.bits_per_letter):
-                decrypted_data += chr(self._primeModulusHandler.get_denary(decrypted_part[o:o+self.bits_per_letter]))
+                decrypted_data += chr(int(decrypted_part[o:o+self.bits_per_letter], 2))
 
 
         return decrypted_data
+
+aes = AesEncryption("aesEncryptionKey", 32)
+
+message = "hello world. How are you doing on this fine evening. Would you like to go somewhere today? I know, lets go to school"
+
+start = datetime.datetime.now()
+e_message = aes.encrypt(message)
+# d_message = aes.decrypt(e_message)
+end = datetime.datetime.now()
+print(end - start)
 
 """tests:
 aes = AesEncryption()
@@ -232,14 +250,4 @@ d_message = aes.decrypt(e_message)
 print(d_message)
 
 ---------
-
-aes = AesEncryption("aesEncryptionKey", 16)
-message = "hello world"
-print(message)
-e_message = aes.encrypt(message)
-print(e_message)
-d_message = aes.decrypt(e_message)
-print(d_message)
-
-
 """

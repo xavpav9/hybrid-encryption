@@ -1,4 +1,4 @@
-import random
+import random, datetime
 
 from primeModulusHandler import PrimeModulusHandler
 
@@ -29,13 +29,13 @@ class RsaEncryption:
 
         return [n, e, d]
 
-    def encrypt_message(self, m, n, e):
+    def encrypt(self, m, n, e):
         encrypted_message = ""
         current_part = ""
 
-        bits_per_packet = len(self._primeModulusHandler.get_bit_pattern(n)) // self.bits_per_letter * self.bits_per_letter
+        bits_per_packet = self._primeModulusHandler.number_of_bits(n) // self.bits_per_letter * self.bits_per_letter
         encrypted_bits_per_packet = bits_per_packet
-        if bits_per_packet != len(self._primeModulusHandler.get_bit_pattern(n)): encrypted_bits_per_packet = bits_per_packet + self.bits_per_letter
+        if bits_per_packet != self._primeModulusHandler.number_of_bits(n): encrypted_bits_per_packet = bits_per_packet + self.bits_per_letter
         letters_per_packet = bits_per_packet // self.bits_per_letter
 
         if letters_per_packet == 0:
@@ -44,14 +44,15 @@ class RsaEncryption:
 
         for letter in list(m):
             character_code = ord(letter)
-            denary = self._primeModulusHandler.get_denary(current_part)
+            if current_part != "":
+                denary = int(current_part, 2)
 
             if current == letters_per_packet:
                 current_encrypted = self._primeModulusHandler.reduce_exponential_modulo(denary, e, n)
                 binary = self._primeModulusHandler.get_bit_pattern(current_encrypted, encrypted_bits_per_packet)
 
                 for i in range(0, len(binary), 8):
-                    encrypted_message += chr(self._primeModulusHandler.get_denary(binary[i:i+8]))
+                    encrypted_message += chr(int(binary[i:i+8], 2))
 
                 current_part = self._primeModulusHandler.get_bit_pattern(character_code, self.bits_per_letter)
                 current = 1
@@ -61,20 +62,20 @@ class RsaEncryption:
 
         if current != 0:
             current_part += "0" * (letters_per_packet * self.bits_per_letter - len(current_part))
-            denary = self._primeModulusHandler.get_denary(current_part)
+            denary = int(current_part, 2)
             current_encrypted = self._primeModulusHandler.reduce_exponential_modulo(denary, e, n)
             binary = self._primeModulusHandler.get_bit_pattern(current_encrypted, encrypted_bits_per_packet)
             for i in range(0, len(binary), 8):
-                encrypted_message += chr(self._primeModulusHandler.get_denary(binary[i:i+8]))
+                encrypted_message += chr(int(binary[i:i+8], 2))
 
         return encrypted_message
 
-    def decrypt_message(self, c, n, d):
+    def decrypt(self, c, n, d):
         decrypted_message = ""
 
-        bits_per_packet = len(self._primeModulusHandler.get_bit_pattern(n)) // self.bits_per_letter * self.bits_per_letter
+        bits_per_packet = self._primeModulusHandler.number_of_bits(n) // self.bits_per_letter * self.bits_per_letter
         encrypted_bits_per_packet = bits_per_packet
-        if bits_per_packet != len(self._primeModulusHandler.get_bit_pattern(n)): encrypted_bits_per_packet = bits_per_packet + self.bits_per_letter
+        if bits_per_packet != self._primeModulusHandler.number_of_bits(n): encrypted_bits_per_packet = bits_per_packet + self.bits_per_letter
         letters_per_packet = bits_per_packet // self.bits_per_letter
 
 
@@ -82,14 +83,14 @@ class RsaEncryption:
 
         for i in range(0, len(c), (encrypted_bits_per_packet) // 8):
             letters = [self._primeModulusHandler.get_bit_pattern(ord(letter)).zfill(8) for letter in list(c[i:i + (encrypted_bits_per_packet) // 8])]
-            block = self._primeModulusHandler.get_denary("".join(letters))
+            block = int("".join(letters), 2)
             decrypted_block = self._primeModulusHandler.reduce_exponential_modulo(block, d, n)
             binary = self._primeModulusHandler.get_bit_pattern(decrypted_block, bits_per_packet)
             current_message = ""
 
             for i in range(0, len(binary), self.bits_per_letter):
                 bit_pattern = binary[i:i + self.bits_per_letter]
-                denary = self._primeModulusHandler.get_denary(bit_pattern)
+                denary = int(bit_pattern, 2)
                 if denary == 0: break
                 current_message += chr(denary)
 
@@ -105,16 +106,32 @@ bits = 32
 [n, e, d] = rsa.generate_keys(bits)
 
 message = "“I walked through the treacherous jungle with nothing but a 𝒻ly“"
-e_message = rsa.encrypt_message(message, n, e)
+e_message = rsa.encrypt(message, n, e)
 print(e_message)
-d_message = rsa.decrypt_message(e_message, n, d)
+d_message = rsa.decrypt(e_message, n, d)
 print(d_message)
 
 
 """
+file = open("heart-of-darkness.txt", "r")
+message = file.read()
+file.close()
+
+start = datetime.datetime.now()
+print(message)
+e_message = rsa.encrypt(message, n, e)
+print("e:",e_message)
+d_message = rsa.decrypt(e_message, n, d)
+print("d:",d_message)
+end = datetime.datetime.now()
+print(end - start)
+"""
+
+
+"""
 message = open("heart-of-darkness.txt", "r").read()
-e_message = rsa.encrypt_message(message, n, e)
-d_message = rsa.decrypt_message(e_message, n, d)
+e_message = rsa.encrypt(message, n, e)
+d_message = rsa.decrypt(e_message, n, d)
 print(e_message)
 print(d_message)
 
