@@ -81,10 +81,9 @@ class Server:
             return conn.recv(length).decode(encoding="utf-8")
 
     def distribute_message(self, conn, message):
-        message = self.conn_information[conn]["aes"].decrypt(message.decode(encoding="utf-8"))
         print(conn, message)
         for other_conn in self.conns:
-            if other_conn != conn:
+            if other_conn != conn and other_conn != self.sock:
                 e_message = self.conn_information[other_conn]["aes"].encrypt(message)
                 other_conn.send(format_message(e_message, self.header_size))
 
@@ -92,7 +91,7 @@ def format_message(message, header_size):
     bytes_message = str(message).encode(encoding="utf-8")
     return f"{len(bytes_message):<{header_size}}".encode(encoding="utf-8") + bytes_message
 
-server = Server("0.0.0.0", 2800, 256)
+server = Server("0.0.0.0", 2801, 1024)
 while True:
     conns_to_read, _, conns_in_error = select(server.conns,server. conns,server. conns)
     for conn in conns_in_error:

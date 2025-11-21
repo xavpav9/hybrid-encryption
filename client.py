@@ -42,7 +42,11 @@ class Client:
         [self.pub, self.priv] = rsaEncryption.generate_classes()
 
     def receive_message(self, aes_decrypt=True):
-        length = int(self.sock.recv(self.header_size).decode(encoding="utf-8").strip())
+        length = self.sock.recv(self.header_size).decode(encoding="utf-8").strip()
+        if length == "":
+            return False
+        length = int(length)
+
         if aes_decrypt:
             return self.aesEncryption.decrypt(self.sock.recv(length).decode(encoding="utf-8"))
         else:
@@ -54,7 +58,16 @@ class Client:
         self.sock.send(format_message(e_message, self.header_size))
 
 def main():
-    client = Client("127.0.0.1", 2800, 256)
+    client = Client("127.0.0.1", 2801, 1024)
+    while True:
+        message = input("> ")
+        client.send_message(message)
+        message_from_server = client.receive_message()
+        if message_from_server == False:
+            print("exiting...")
+            break
+        else:
+            print(message_from_server)
     client.sock.close()
 
 if __name__ == "__main__":
