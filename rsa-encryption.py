@@ -115,7 +115,7 @@ class RsaPublic(RsaEncryption):
         return super().encrypt(message, self.n, self.e)
 
     def decrypt(self, message):
-        return super().encrypt(message, self.n, self.e)
+        return super().decrypt(message, self.n, self.e)
 
 class RsaPrivate(RsaEncryption):
     def __init__(self, n, d, encoding=8):
@@ -134,7 +134,6 @@ class RsaPrivate(RsaEncryption):
 
 if __name__ == "__main__":
     rsa = RsaEncryption(8)
-    p = PrimeModulusHandler()
 
     bits = 1024
     print("Generating keys ... ", end="", flush=True)
@@ -150,6 +149,7 @@ if __name__ == "__main__":
     print("d:", d_message)
 
 
+    print()
     message = "Bye, world!"
     print(message)
     e_message = priv.encrypt(message)

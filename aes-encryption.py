@@ -197,11 +197,21 @@ class AesEncryption:
 
         return decrypted_data
 
-aes = AesEncryption("aesEncryptionKey", 8)
+if __name__ == "__main__":
+    aes = AesEncryption("aesEncryptionKey", 8)
 
-message = "hello world"
-print(message)
-e_message = aes.encrypt(message)
-print("e:",e_message)
-d_message = aes.decrypt(e_message)
-print("d:",d_message)
+    message = "heLlo world."
+    print(message)
+    e_message = aes.encrypt(message)
+    print("e:", e_message)
+    d_message = aes.decrypt(e_message)
+    print("d:", d_message)
+
+
+    print()
+    message = "Bye, world!"
+    print(message)
+    e_message = aes.encrypt(message)
+    print("e:", e_message)
+    d_message = aes.decrypt(e_message)
+    print("d:", d_message)
