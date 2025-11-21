@@ -37,6 +37,7 @@ class RsaEncryption:
         current_part = ""
 
         bits_per_packet = self._primeModulusHandler.number_of_bits(n) // self.bits_per_letter * self.bits_per_letter
+        if bits_per_packet == self._primeModulusHandler.number_of_bits(n): bits_per_packet -= self.bits_per_letter
         encrypted_bits_per_packet = bits_per_packet
         if bits_per_packet != self._primeModulusHandler.number_of_bits(n): encrypted_bits_per_packet = bits_per_packet + self.bits_per_letter
         letters_per_packet = bits_per_packet // self.bits_per_letter
@@ -47,10 +48,9 @@ class RsaEncryption:
 
         for letter in list(m):
             character_code = ord(letter)
-            if current_part != "":
-                denary = int(current_part, 2)
 
             if current == letters_per_packet:
+                denary = int(current_part, 2)
                 current_encrypted = self._primeModulusHandler.reduce_exponential_modulo(denary, e, n)
                 binary = self._primeModulusHandler.get_bit_pattern(current_encrypted, encrypted_bits_per_packet)
 
@@ -77,6 +77,7 @@ class RsaEncryption:
         decrypted_message = ""
 
         bits_per_packet = self._primeModulusHandler.number_of_bits(n) // self.bits_per_letter * self.bits_per_letter
+        if bits_per_packet == self._primeModulusHandler.number_of_bits(n): bits_per_packet -= self.bits_per_letter
         encrypted_bits_per_packet = bits_per_packet
         if bits_per_packet != self._primeModulusHandler.number_of_bits(n): encrypted_bits_per_packet = bits_per_packet + self.bits_per_letter
         letters_per_packet = bits_per_packet // self.bits_per_letter
@@ -85,7 +86,7 @@ class RsaEncryption:
         if letters_per_packet == 0: raise Exception("The n is not high enough to encode a single letter.")
 
         for i in range(0, len(c), (encrypted_bits_per_packet) // 8):
-            letters = [self._primeModulusHandler.get_bit_pattern(ord(letter)).zfill(8) for letter in list(c[i:i + (encrypted_bits_per_packet) // 8])]
+            letters = [self._primeModulusHandler.get_bit_pattern(ord(letter)) for letter in list(c[i:i + (encrypted_bits_per_packet) // 8])]
             block = int("".join(letters), 2)
             decrypted_block = self._primeModulusHandler.reduce_exponential_modulo(block, d, n)
             binary = self._primeModulusHandler.get_bit_pattern(decrypted_block, bits_per_packet)

@@ -50,7 +50,7 @@ class Server:
         rsa_obj = rsa.RsaPublic(conn_n, conn_e, 8)
         self.conn_information[conn] = {"rsa": rsa_obj,
                                        "aes": aes_obj }
-        print("ak:     ",aes_key)
+
         conn.send(format_message(self.pub.e, self.header_size) + format_message(self.pub.n, self.header_size))
         conn.send(format_message(rsa_obj.encrypt(aes_key), self.header_size))
 
@@ -59,6 +59,8 @@ class Server:
         print(received_msg)
         if received_msg != valid_received_msg:
             self.remove_conn(conn)
+        else:
+            print("valid")
             
 
     def remove_conn(self, conn):
@@ -68,9 +70,10 @@ class Server:
         self.conn_information.pop(conn)
 
     def receive_message(self, conn, aes_decrypt=True):
-        length = int(conn.recv(self.header_size).decode(encoding="utf-8").strip())
+        length = conn.recv(self.header_size).decode(encoding="utf-8").strip()
         if length == "":
             return False
+        length = int(length)
 
         if aes_decrypt:
             return self.conn_information[conn]["aes"].decrypt(conn.recv(length).decode(encoding="utf-8"))
@@ -102,4 +105,5 @@ while True:
             message = server.receive_message(conn)
             if not message:
                 server.remove_conn(conn)
-            server.distribute_message(conn, message)
+            else:
+                server.distribute_message(conn, message)
