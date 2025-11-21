@@ -1,4 +1,4 @@
-import datetime
+import datetime, sys
 from primeModulusHandler import PrimeModulusHandler
 
 class AesEncryption:
@@ -48,62 +48,48 @@ class AesEncryption:
 
     def mix_columns(self, block):
         # matrix [[2,3,1,1],[1,2,3,1],[1,1,2,3],[3,1,1,2]]
-        resultant_block = [[],[],[],[]]
         # Using fast implementation from The Design of Rijndael 4.1.2
-        for column_number in range(4):
-            column = block[column_number]
+        for column in block:
             t = column[0] ^ column[1] ^ column[2] ^ column[3]
             u = column[0]
 
-            resultant_block[column_number].append(column[0] ^ self._primeModulusHandler.multiply_in_gf8(column[0] ^ column[1], 2) ^ t)
-            resultant_block[column_number].append(column[1] ^ self._primeModulusHandler.multiply_in_gf8(column[1] ^ column[2], 2) ^ t)
-            resultant_block[column_number].append(column[2] ^ self._primeModulusHandler.multiply_in_gf8(column[2] ^ column[3], 2) ^ t)
-            resultant_block[column_number].append(column[3] ^ self._primeModulusHandler.multiply_in_gf8(column[3] ^ u, 2) ^ t)
-
-        return resultant_block
+            column[0] ^= self._primeModulusHandler.multiply_in_gf8(column[0] ^ column[1], 2) ^ t
+            column[1] ^= self._primeModulusHandler.multiply_in_gf8(column[1] ^ column[2], 2) ^ t
+            column[2] ^= self._primeModulusHandler.multiply_in_gf8(column[2] ^ column[3], 2) ^ t
+            column[3] ^= self._primeModulusHandler.multiply_in_gf8(column[3] ^ u, 2) ^ t
 
     def inverse_mix_columns(self, block):
         # matrix [[14,11,13,9],[9,14,11,13],[13,9,14,11],[11,13,9,14]]
-        resultant_block = [[],[],[],[]]
         # Using fast implementation from The Design of Rijndael 4.1.3
-        for column_number in range(4):
-            column = block[column_number]
+        for column in block:
             u = self._primeModulusHandler.multiply_in_gf8(self._primeModulusHandler.multiply_in_gf8(column[0] ^ column[2], 2), 2)
             v = self._primeModulusHandler.multiply_in_gf8(self._primeModulusHandler.multiply_in_gf8(column[1] ^ column[3], 2), 2)
-            resultant_block[column_number].append(column[0] ^ u)
-            resultant_block[column_number].append(column[1] ^ v)
-            resultant_block[column_number].append(column[2] ^ u)
-            resultant_block[column_number].append(column[3] ^ v)
+            column[0] ^= u
+            column[1] ^= v
+            column[2] ^= u
+            column[3] ^= v
 
-        return self.mix_columns(resultant_block)
+        self.mix_columns(block)
 
     def shift_rows(self, block):
-        resultant_block = [[],[],[],[]]
-        for column in range(4):
-            for row in range(4):
-                resultant_block[column].append(block[(column + row) % 4][row])
-        return resultant_block
+        block[0][1], block[1][1], block[2][1], block[3][1] = block[1][1], block[2][1], block[3][1], block[0][1]
+        block[0][2], block[1][2], block[2][2], block[3][2] = block[2][2], block[3][2], block[0][2], block[1][2]
+        block[0][3], block[1][3], block[2][3], block[3][3] = block[3][3], block[0][3], block[1][3], block[2][3]
 
     def inverse_shift_rows(self, block):
-        resultant_block = [[],[],[],[]]
-        for column in range(4):
-            for row in range(4):
-                resultant_block[column].append(block[(column - row) % 4][row])
-        return resultant_block
+        block[0][1], block[1][1], block[2][1], block[3][1] = block[3][1], block[0][1], block[1][1], block[2][1]
+        block[0][2], block[1][2], block[2][2], block[3][2] = block[2][2], block[3][2], block[0][2], block[1][2]
+        block[0][3], block[1][3], block[2][3], block[3][3] = block[1][3], block[2][3], block[3][3], block[0][3]
 
     def sub_bytes(self, block):
-        resultant_block = [[],[],[],[]]
         for column in range(4):
             for row in range(4):
-                resultant_block[column].append(self.sbox[block[column][row]])
-        return resultant_block
+                block[column][row] = self.sbox[block[column][row]]
 
     def inverse_sub_bytes(self, block):
-        resultant_block = [[],[],[],[]]
         for column in range(4):
             for row in range(4):
-                resultant_block[column].append(self.inverse_sbox[block[column][row]])
-        return resultant_block
+                block[column][row] = self.inverse_sbox[block[column][row]]
 
     def next_key(self, block, rcon):
         resultant_block = [[],[],[],[]]
@@ -118,11 +104,9 @@ class AesEncryption:
         return resultant_block
 
     def add_round_key(self, block, round_key):
-        resultant_block = [[],[],[],[]]
         for column in range(4):
             for row in range(4):
-                resultant_block[column].append(block[column][row] ^ round_key[column][row])
-        return resultant_block
+                block[column][row] ^= round_key[column][row]
 
     def encrypt(self, data):
         encrypted_data = ""
@@ -146,16 +130,16 @@ class AesEncryption:
                 for offset in range(0, 32, 8):
                     block[column // 32].append(int(binary[column+offset:column+offset+8], 2))
 
-            block = self.add_round_key(block, self.key)
+            self.add_round_key(block, self.key)
             for round in range(9):
-                block = self.sub_bytes(block)
-                block = self.shift_rows(block)
-                block = self.mix_columns(block)
-                block = self.add_round_key(block, round_keys[round])
+                self.sub_bytes(block)
+                self.shift_rows(block)
+                self.mix_columns(block)
+                self.add_round_key(block, round_keys[round])
 
-            block = self.sub_bytes(block)
-            block = self.shift_rows(block)
-            block = self.add_round_key(block, round_keys[9])
+            self.sub_bytes(block)
+            self.shift_rows(block)
+            self.add_round_key(block, round_keys[9])
             
             for column in range(4):
                 for row in range(4):
@@ -186,16 +170,16 @@ class AesEncryption:
                 for offset in range(0, 32, 8):
                     block[column // 32].append(int(binary[column+offset:column+offset+8], 2))
 
-            block = self.add_round_key(block, round_keys[9])
-            block = self.inverse_shift_rows(block)
-            block = self.inverse_sub_bytes(block)
+            self.add_round_key(block, round_keys[9])
+            self.inverse_shift_rows(block)
+            self.inverse_sub_bytes(block)
             for round in range(8, -1, -1):
-                block = self.add_round_key(block, round_keys[round])
-                block = self.inverse_mix_columns(block)
-                block = self.inverse_shift_rows(block)
-                block = self.inverse_sub_bytes(block)
+                self.add_round_key(block, round_keys[round])
+                self.inverse_mix_columns(block)
+                self.inverse_shift_rows(block)
+                self.inverse_sub_bytes(block)
 
-            block = self.add_round_key(block, self.key)
+            self.add_round_key(block, self.key)
             
             decrypted_part = ""
             for column in range(4):
@@ -208,7 +192,7 @@ class AesEncryption:
 
         return decrypted_data
 
-aes = AesEncryption("aesEncryptionKey", 8)
+aes = AesEncryption("aesEncryptionKey", 32)
 
 message = "hello world. How are you doing on this fine evening. Would you like to go somewhere today? I know, lets go to school"
 

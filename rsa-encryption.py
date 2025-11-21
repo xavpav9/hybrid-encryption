@@ -106,6 +106,10 @@ bits = 32
 [n, e, d] = rsa.generate_keys(bits)
 
 message = "“I walked through the treacherous jungle with nothing but a 𝒻ly“"
+file = open("heart-of-darkness.txt", "r")
+message = file.read()
+file.close()
+
 e_message = rsa.encrypt(message, n, e)
 print(e_message)
 d_message = rsa.decrypt(e_message, n, d)
