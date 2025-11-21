@@ -99,10 +99,10 @@ class RsaEncryption:
 
         return "".join(decrypted_message)
 
-rsa = RsaEncryption(24)
+rsa = RsaEncryption(32)
 p = PrimeModulusHandler()
 
-bits = 32
+bits = 1024
 [n, e, d] = rsa.generate_keys(bits)
 
 message = "“I walked through the treacherous jungle with nothing but a 𝒻ly“"
@@ -110,11 +110,14 @@ file = open("heart-of-darkness.txt", "r")
 message = file.read()
 file.close()
 
+start = datetime.datetime.now()
+print(message)
 e_message = rsa.encrypt(message, n, e)
 print(e_message)
 d_message = rsa.decrypt(e_message, n, d)
 print(d_message)
-
+end = datetime.datetime.now()
+print(end - start)
 
 """
 file = open("heart-of-darkness.txt", "r")

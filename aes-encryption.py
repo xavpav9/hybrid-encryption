@@ -36,7 +36,7 @@ class AesEncryption:
         if num == 0: return 99 # special case
         A = [[1,0,0,0,1,1,1,1],[1,1,0,0,0,1,1,1],[1,1,1,0,0,0,1,1],[1,1,1,1,0,0,0,1],[1,1,1,1,1,0,0,0],[0,1,1,1,1,1,0,0],[0,0,1,1,1,1,1,0],[0,0,0,1,1,1,1,1]]
         b = "11000110"
-        inv_num = self._primeModulusHandler.multiplicative_inverse_in_gf8(num)
+        inv_num = self._primeModulusHandler.multiplicative_inverse_in_gf256(num)
         return self._primeModulusHandler.affine_transformation(A, inv_num, b)
 
     def rijndael_inverse_sbox(self, num):
@@ -44,7 +44,12 @@ class AesEncryption:
         A = [[0,0,1,0,0,1,0,1],[1,0,0,1,0,0,1,0],[0,1,0,0,1,0,0,1],[1,0,1,0,0,1,0,0],[0,1,0,1,0,0,1,0],[0,0,1,0,1,0,0,1],[1,0,0,1,0,1,0,0],[0,1,0,0,1,0,1,0]]
         b = "10100000"
         inv_num = self._primeModulusHandler.affine_transformation(A, num, b)
-        return self._primeModulusHandler.multiplicative_inverse_in_gf8(inv_num)
+        return self._primeModulusHandler.multiplicative_inverse_in_gf256(inv_num)
+
+    def multiply_in_gf256_by_2(self, num):
+        num <<= 1
+        if num > 255: return num ^ 283
+        else: return num
 
     def mix_columns(self, block):
         # matrix [[2,3,1,1],[1,2,3,1],[1,1,2,3],[3,1,1,2]]
@@ -53,17 +58,17 @@ class AesEncryption:
             t = column[0] ^ column[1] ^ column[2] ^ column[3]
             u = column[0]
 
-            column[0] ^= self._primeModulusHandler.multiply_in_gf8(column[0] ^ column[1], 2) ^ t
-            column[1] ^= self._primeModulusHandler.multiply_in_gf8(column[1] ^ column[2], 2) ^ t
-            column[2] ^= self._primeModulusHandler.multiply_in_gf8(column[2] ^ column[3], 2) ^ t
-            column[3] ^= self._primeModulusHandler.multiply_in_gf8(column[3] ^ u, 2) ^ t
+            column[0] ^= self.multiply_in_gf256_by_2(column[0] ^ column[1]) ^ t
+            column[1] ^= self.multiply_in_gf256_by_2(column[1] ^ column[2]) ^ t
+            column[2] ^= self.multiply_in_gf256_by_2(column[2] ^ column[3]) ^ t
+            column[3] ^= self.multiply_in_gf256_by_2(column[3] ^ u) ^ t
 
     def inverse_mix_columns(self, block):
         # matrix [[14,11,13,9],[9,14,11,13],[13,9,14,11],[11,13,9,14]]
         # Using fast implementation from The Design of Rijndael 4.1.3
         for column in block:
-            u = self._primeModulusHandler.multiply_in_gf8(self._primeModulusHandler.multiply_in_gf8(column[0] ^ column[2], 2), 2)
-            v = self._primeModulusHandler.multiply_in_gf8(self._primeModulusHandler.multiply_in_gf8(column[1] ^ column[3], 2), 2)
+            u = self.multiply_in_gf256_by_2(self.multiply_in_gf256_by_2(column[0] ^ column[2]))
+            v = self.multiply_in_gf256_by_2(self.multiply_in_gf256_by_2(column[1] ^ column[3]))
             column[0] ^= u
             column[1] ^= v
             column[2] ^= u

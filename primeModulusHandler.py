@@ -126,7 +126,7 @@ class PrimeModulusHandler:
 
         return [current_x, current_y, current_r] # [x, y, gcd]
 
-    def multiply_in_gf8(self, num1, num2): # in GF(2^8)
+    def multiply_in_gf256(self, num1, num2): # in GF(2^8)
         reducer = 283 # #11b
         resultant_den = num1
 
@@ -150,11 +150,11 @@ class PrimeModulusHandler:
 
         return resultant_den
 
-    def multiplicative_inverse_in_gf8(self, num):
+    def multiplicative_inverse_in_gf256(self, num):
         if num == 0:
             return 0
         for possible_inverse in range(1, 256):
-            if self.multiply_in_gf8(num, possible_inverse) == 1:
+            if self.multiply_in_gf256(num, possible_inverse) == 1:
                 return possible_inverse
 
     def affine_transformation(self, A, num, b):
