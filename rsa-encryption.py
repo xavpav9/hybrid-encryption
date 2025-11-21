@@ -5,6 +5,7 @@ from primeModulusHandler import PrimeModulusHandler
 class RsaEncryption:
     def __init__(self, encoding=8):
         self._primeModulusHandler = PrimeModulusHandler()
+        [self.n, self.e, self.d] = self.generate_keys(8) # placeholder keys
         try:
             if int(encoding) in [8, 16, 24, 32]:
                 self.bits_per_letter = int(encoding)
@@ -13,8 +14,8 @@ class RsaEncryption:
         except:
             raise Exception("Invalid RsaEncryption instantiation - pick a value of bits from 8, 16, 24 or 32.")
 
-    def generate_keys(self, bits_per_key):
-        [p, q] = [self._primeModulusHandler.find_prime(bits_per_key), self._primeModulusHandler.find_prime(bits_per_key)]
+    def generate_keys(self, bits_per_prime):
+        [p, q] = [self._primeModulusHandler.find_prime(bits_per_prime), self._primeModulusHandler.find_prime(bits_per_prime)]
         n = p * q
         totient = (p - 1) * (q - 1)
 
@@ -27,7 +28,11 @@ class RsaEncryption:
         while d < 0:
             d += totient
 
+        [self.n, self.e, self.d] = [n, e, d]
         return [n, e, d]
+
+    def generate_classes(self):
+        return [ RsaPublic(self.n, self.e, self.bits_per_letter), RsaPrivate(self.n, self.d, self.bits_per_letter) ]
 
     def encrypt(self, m, n, e):
         encrypted_message = ""
@@ -99,54 +104,55 @@ class RsaEncryption:
 
         return "".join(decrypted_message)
 
-rsa = RsaEncryption(32)
-p = PrimeModulusHandler()
+class RsaPublic(RsaEncryption):
+    def __init__(self, n, e, encoding=8):
+        super().__init__(encoding)
+        self.n = n
+        self.e = e
+        self.d = None
 
-bits = 1024
-[n, e, d] = rsa.generate_keys(bits)
+    def encrypt(self, message):
+        return super().encrypt(message, self.n, self.e)
 
-message = "“I walked through the treacherous jungle with nothing but a 𝒻ly“"
-file = open("heart-of-darkness.txt", "r")
-message = file.read()
-file.close()
+    def decrypt(self, message):
+        return super().encrypt(message, self.n, self.e)
 
-start = datetime.datetime.now()
-print(message)
-e_message = rsa.encrypt(message, n, e)
-print(e_message)
-d_message = rsa.decrypt(e_message, n, d)
-print(d_message)
-end = datetime.datetime.now()
-print(end - start)
+class RsaPrivate(RsaEncryption):
+    def __init__(self, n, d, encoding=8):
+        super().__init__(encoding)
+        self.n = n
+        self.e = None
+        self.d = d
 
-"""
-file = open("heart-of-darkness.txt", "r")
-message = file.read()
-file.close()
+    def encrypt(self, message):
+        return super().encrypt(message, self.n, self.d)
 
-start = datetime.datetime.now()
-print(message)
-e_message = rsa.encrypt(message, n, e)
-print("e:",e_message)
-d_message = rsa.decrypt(e_message, n, d)
-print("d:",d_message)
-end = datetime.datetime.now()
-print(end - start)
-"""
+    def decrypt(self, message):
+        return super().decrypt(message, self.n, self.d)
 
 
-"""
-message = open("heart-of-darkness.txt", "r").read()
-e_message = rsa.encrypt(message, n, e)
-d_message = rsa.decrypt(e_message, n, d)
-print(e_message)
-print(d_message)
 
-file = open("enc-hod.txt", "w")
-file.write(e_message)
-file.close()
+if __name__ == "__main__":
+    rsa = RsaEncryption(8)
+    p = PrimeModulusHandler()
 
-file = open("dec-hod.txt", "w")
-file.write(d_message)
-file.close()
-"""
+    bits = 1024
+    print("Generating keys ... ", end="", flush=True)
+    rsa.generate_keys(bits)
+    print("done\n")
+    [pub, priv] = rsa.generate_classes()
+
+    message = "heLlo world."
+    print(message)
+    e_message = pub.encrypt(message)
+    print("e:", e_message)
+    d_message = priv.decrypt(e_message)
+    print("d:", d_message)
+
+
+    message = "Bye, world!"
+    print(message)
+    e_message = priv.encrypt(message)
+    print("e:", e_message)
+    d_message = pub.decrypt(e_message)
+    print("d:", d_message)

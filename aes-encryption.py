@@ -197,55 +197,11 @@ class AesEncryption:
 
         return decrypted_data
 
-aes = AesEncryption("aesEncryptionKey", 32)
+aes = AesEncryption("aesEncryptionKey", 8)
 
-message = "hello world. How are you doing on this fine evening. Would you like to go somewhere today? I know, lets go to school"
-
-message = open("heart-of-darkness.txt", "r").read()
-
-start = datetime.datetime.now()
+message = "hello world"
 print(message)
 e_message = aes.encrypt(message)
 print("e:",e_message)
 d_message = aes.decrypt(e_message)
 print("d:",d_message)
-end = datetime.datetime.now()
-print(end - start)
-
-"""tests:
-aes = AesEncryption()
-
-b1 = [[43,40,171,9],[126,174,247,207],[21,210,21,79],[22,166,136,60]]
-
-for i in range(10):
-    b1 = aes.next_key(b1, [aes.rcon[i], 0, 0, 0])
-
-print(b1)
-
----------
-
-block = [[int("d4", 16),int("e0", 16),int("b8", 16),int("1e", 16)],[int("bf", 16),int("b4", 16),int("41", 16),int("27", 16)],[int("5d", 16),int("52", 16),int("11", 16),int("98", 16)],[int("30", 16),int("ae", 16),int("f1", 16),int("e5", 16)]]
-print(aes.inverse_mix_columns(aes.mix_columns(block)))
-
----------
-
-message = ""
-for i in ["32", "88", "31", "e0", "43", "5a", "31", "37", "f6", "30", "98", "07", "a8", "8d", "a2", "34"]:
-    message += chr(int(i, 16))
-key = ""
-for i in ["2b", "28", "ab", "09", "7e", "ae", "f7", "cf", "15", "d2", "15", "4f", "16", "a6", "88", "3c"]:
-    key += chr(int(i, 16))
-
-print(message)
-print(key)
-
-aes = AesEncryption(key, 8)
-e_message = aes.encrypt(message)
-print(e_message)
-
-
-d_message = aes.decrypt(e_message)
-print(d_message)
-
----------
-"""
