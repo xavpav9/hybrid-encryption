@@ -36,7 +36,6 @@ class Server:
 
         return key
 
-
     def accept_connection(self):
         conn, addr = self.sock.accept()
         self.conns.append(conn)
@@ -62,7 +61,6 @@ class Server:
         else:
             print("valid")
             
-
     def remove_conn(self, conn):
         conn.shutdown(socket.SHUT_RDWR)
         conn.close()
@@ -81,11 +79,12 @@ class Server:
             return conn.recv(length).decode(encoding="utf-8")
 
     def distribute_message(self, conn, message):
-        print(conn, message)
+        print(f"\nNew message from {conn}: ({message})")
         for other_conn in self.conns:
             if other_conn != conn and other_conn != self.sock:
                 e_message = self.conn_information[other_conn]["aes"].encrypt(message)
                 other_conn.send(format_message(e_message, self.header_size))
+                print(f"To {other_conn}: {e_message}")
 
 def format_message(message, header_size):
     bytes_message = str(message).encode(encoding="utf-8")

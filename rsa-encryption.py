@@ -18,10 +18,10 @@ class RsaEncryption:
         totient = (p - 1) * (q - 1)
 
         e = 65537
-        [d, _, gcd] = self._primeModulusHandler.euclidean_algorithm(e, totient)
+        [d, _, gcd] = self._primeModulusHandler.extended_euclidean_algorithm(e, totient)
         while gcd != 1:
             e = self._primeModulusHandler.find_prime(16)
-            [d, _, gcd] = self._primeModulusHandler.euclidean_algorithm(e, totient)
+            [d, _, gcd] = self._primeModulusHandler.extended_euclidean_algorithm(e, totient)
 
         while d < 0:
             d += totient

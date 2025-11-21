@@ -58,7 +58,7 @@ class Client:
         self.sock.send(format_message(e_message, self.header_size))
 
 def main():
-    client = Client("127.0.0.1", 2801, 1024)
+    client = Client("127.0.0.1", 2801, 512)
     while True:
         message = input("> ")
         client.send_message(message)

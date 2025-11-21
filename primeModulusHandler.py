@@ -98,7 +98,7 @@ class PrimeModulusHandler:
             found = self.check_if_prime(possible_prime)
         return possible_prime
 
-    def euclidean_algorithm(self, a, b): # extended
+    def extended_euclidean_algorithm(self, a, b):
         previous_r = a
         current_r = b
         previous_x = 1
