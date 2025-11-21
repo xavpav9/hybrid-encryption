@@ -26,9 +26,9 @@ class AesEncryption:
 
     def set_key(self, key): # key in ascii
         block = [[],[],[],[]]
-        for o in range(0, 16, 4):
-            for j in range(0, 4):
-                block[o // 4].append(ord(key[o + j]))
+        for column in range(0, 16, 4):
+            for offset in range(0, 4):
+                block[column // 4].append(ord(key[column + offset]))
         self.key = block
 
 
@@ -49,15 +49,14 @@ class AesEncryption:
     def mix_columns(self, block, matrix=[[2,3,1,1],[1,2,3,1],[1,1,2,3],[3,1,1,2]]):
         resultant_block = [[],[],[],[]]
         for column_number in range(4):
-            column_data = [row[column_number] for row in block]
             for row_number in range(4):
                 matrix_data = matrix[row_number]
-                values_to_be_summed = [self._primeModulusHandler.multiply_in_gf8(column_data[i], matrix_data[i]) for i in range(4)]
+                values_to_be_summed = [self._primeModulusHandler.multiply_in_gf8(block[column_number][i], matrix_data[i]) for i in range(4)]
                 result = 0
                 for data in values_to_be_summed:
                     result = result ^ data
 
-                resultant_block[row_number].append(result)
+                resultant_block[column_number].append(result)
 
         return resultant_block
 
@@ -66,58 +65,49 @@ class AesEncryption:
 
     def shift_rows(self, block):
         resultant_block = [[],[],[],[]]
-        for row in range(4):
-            for i in range(4):
-                resultant_block[row].append(block[row][(i + row) % 4])
+        for column in range(4):
+            for row in range(4):
+                resultant_block[column].append(block[(column + row) % 4][row])
         return resultant_block
 
     def inverse_shift_rows(self, block):
         resultant_block = [[],[],[],[]]
-        for row in range(4):
-            for i in range(4):
-                resultant_block[row].append(block[row][(i - row) % 4])
+        for column in range(4):
+            for row in range(4):
+                resultant_block[column].append(block[(column - row) % 4][row])
         return resultant_block
 
     def sub_bytes(self, block):
         resultant_block = [[],[],[],[]]
-        for row in range(4):
-            for i in range(4):
-                resultant_block[row].append(self.sbox[block[row][i]])
+        for column in range(4):
+            for row in range(4):
+                resultant_block[column].append(self.sbox[block[column][row]])
         return resultant_block
 
     def inverse_sub_bytes(self, block):
         resultant_block = [[],[],[],[]]
-        for row in range(4):
-            for i in range(4):
-                resultant_block[row].append(self.inverse_sbox[block[row][i]])
+        for column in range(4):
+            for row in range(4):
+                resultant_block[column].append(self.inverse_sbox[block[column][row]])
         return resultant_block
 
     def next_key(self, block, rcon):
         resultant_block = [[],[],[],[]]
-        column_data = []
-        for i in range(4):
-            column_data.append([row[i] for row in block])
 
-        subbed_column_data = []
-        for i in range(4):
-            subbed_column_data.append(self.sbox[column_data[3][(i + 1) % 4]])
+        for row in range(4):
+            resultant_block[0].append(block[0][row] ^ self.sbox[block[3][(row + 1) % 4]] ^ rcon[row])
 
-        first_col = []
-        for i in range(4):
-            resultant_block[i].append(column_data[0][i] ^ subbed_column_data[i] ^ rcon[i])
-
-
-        for col in range(1,4):
-            for i in range(4):
-                resultant_block[i].append(column_data[col][i] ^ resultant_block[i][col-1])
+        for column in range(1,4):
+            for row in range(4):
+                resultant_block[column].append(block[column][row] ^ resultant_block[column - 1][row])
 
         return resultant_block
 
     def add_round_key(self, block, round_key):
         resultant_block = [[],[],[],[]]
-        for row in range(4):
-            for col in range(4):
-                resultant_block[row].append(block[row][col] ^ round_key[row][col])
+        for column in range(4):
+            for row in range(4):
+                resultant_block[column].append(block[column][row] ^ round_key[column][row])
         return resultant_block
 
     def encrypt(self, data):
@@ -133,14 +123,14 @@ class AesEncryption:
 
         for i in range(0, len(data), self.letters_per_block):
             str_data = data[i:i+self.letters_per_block]
-            bin = ""
+            binary = ""
             for letter in list(str_data):
-                bin += self._primeModulusHandler.get_bit_pattern(ord(letter), self.bits_per_letter)
-            bin += "0" * (128 - len(bin))
+                binary += self._primeModulusHandler.get_bit_pattern(ord(letter), self.bits_per_letter)
+            binary += "0" * (128 - len(binary))
             block = [[],[],[],[]]
-            for o in range(0, 128, 32):
-                for j in range(0, 32, 8):
-                    block[o // 32].append(int(bin[o+j:o+j+8], 2))
+            for column in range(0, 128, 32):
+                for offset in range(0, 32, 8):
+                    block[column // 32].append(int(binary[column+offset:column+offset+8], 2))
 
             block = self.add_round_key(block, self.key)
             for round in range(9):
@@ -153,9 +143,9 @@ class AesEncryption:
             block = self.shift_rows(block)
             block = self.add_round_key(block, round_keys[9])
             
-            for row in range(4):
-                for col in range(4):
-                    encrypted_data += chr(block[row][col])
+            for column in range(4):
+                for row in range(4):
+                    encrypted_data += chr(block[column][row])
 
         return encrypted_data
 
@@ -173,14 +163,14 @@ class AesEncryption:
 
         for i in range(0, len(data), 16):
             str_data = data[i:i+16]
-            bin = ""
+            binary = ""
             for letter in list(str_data):
-                bin += self._primeModulusHandler.get_bit_pattern(ord(letter))
-            bin += "0" * (128 - len(bin))
+                binary += self._primeModulusHandler.get_bit_pattern(ord(letter))
+            binary += "0" * (128 - len(binary))
             block = [[],[],[],[]]
-            for o in range(0, 128, 32):
-                for j in range(0, 32, 8):
-                    block[o // 32].append(int(bin[o+j:o+j+8], 2))
+            for column in range(0, 128, 32):
+                for offset in range(0, 32, 8):
+                    block[column // 32].append(int(binary[column+offset:column+offset+8], 2))
 
             block = self.add_round_key(block, round_keys[9])
             block = self.inverse_shift_rows(block)
@@ -194,9 +184,9 @@ class AesEncryption:
             block = self.add_round_key(block, self.key)
             
             decrypted_part = ""
-            for row in range(4):
-                for col in range(4):
-                    decrypted_part += self._primeModulusHandler.get_bit_pattern(block[row][col])
+            for column in range(4):
+                for row in range(4):
+                    decrypted_part += self._primeModulusHandler.get_bit_pattern(block[column][row])
             
             for o in range(0, 128, self.bits_per_letter):
                 decrypted_data += chr(int(decrypted_part[o:o+self.bits_per_letter], 2))
@@ -210,7 +200,9 @@ message = "hello world. How are you doing on this fine evening. Would you like t
 
 start = datetime.datetime.now()
 e_message = aes.encrypt(message)
-# d_message = aes.decrypt(e_message)
+print(e_message)
+d_message = aes.decrypt(e_message)
+print(d_message)
 end = datetime.datetime.now()
 print(end - start)
 
