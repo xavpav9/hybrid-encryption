@@ -46,22 +46,36 @@ class AesEncryption:
         inv_num = self._primeModulusHandler.affine_transformation(A, num, b)
         return self._primeModulusHandler.multiplicative_inverse_in_gf8(inv_num)
 
-    def mix_columns(self, block, matrix=[[2,3,1,1],[1,2,3,1],[1,1,2,3],[3,1,1,2]]):
+    def mix_columns(self, block):
+        # matrix [[2,3,1,1],[1,2,3,1],[1,1,2,3],[3,1,1,2]]
         resultant_block = [[],[],[],[]]
+        # Using fast implementation from The Design of Rijndael 4.1.2
         for column_number in range(4):
-            for row_number in range(4):
-                matrix_data = matrix[row_number]
-                values_to_be_summed = [self._primeModulusHandler.multiply_in_gf8(block[column_number][i], matrix_data[i]) for i in range(4)]
-                result = 0
-                for data in values_to_be_summed:
-                    result = result ^ data
+            column = block[column_number]
+            t = column[0] ^ column[1] ^ column[2] ^ column[3]
+            u = column[0]
 
-                resultant_block[column_number].append(result)
+            resultant_block[column_number].append(column[0] ^ self._primeModulusHandler.multiply_in_gf8(column[0] ^ column[1], 2) ^ t)
+            resultant_block[column_number].append(column[1] ^ self._primeModulusHandler.multiply_in_gf8(column[1] ^ column[2], 2) ^ t)
+            resultant_block[column_number].append(column[2] ^ self._primeModulusHandler.multiply_in_gf8(column[2] ^ column[3], 2) ^ t)
+            resultant_block[column_number].append(column[3] ^ self._primeModulusHandler.multiply_in_gf8(column[3] ^ u, 2) ^ t)
 
         return resultant_block
 
     def inverse_mix_columns(self, block):
-        return self.mix_columns(block, [[14,11,13,9],[9,14,11,13],[13,9,14,11],[11,13,9,14]])
+        # matrix [[14,11,13,9],[9,14,11,13],[13,9,14,11],[11,13,9,14]]
+        resultant_block = [[],[],[],[]]
+        # Using fast implementation from The Design of Rijndael 4.1.3
+        for column_number in range(4):
+            column = block[column_number]
+            u = self._primeModulusHandler.multiply_in_gf8(self._primeModulusHandler.multiply_in_gf8(column[0] ^ column[2], 2), 2)
+            v = self._primeModulusHandler.multiply_in_gf8(self._primeModulusHandler.multiply_in_gf8(column[1] ^ column[3], 2), 2)
+            resultant_block[column_number].append(column[0] ^ u)
+            resultant_block[column_number].append(column[1] ^ v)
+            resultant_block[column_number].append(column[2] ^ u)
+            resultant_block[column_number].append(column[3] ^ v)
+
+        return self.mix_columns(resultant_block)
 
     def shift_rows(self, block):
         resultant_block = [[],[],[],[]]
@@ -194,15 +208,18 @@ class AesEncryption:
 
         return decrypted_data
 
-aes = AesEncryption("aesEncryptionKey", 32)
+aes = AesEncryption("aesEncryptionKey", 8)
 
 message = "hello world. How are you doing on this fine evening. Would you like to go somewhere today? I know, lets go to school"
 
+message = open("heart-of-darkness.txt", "r").read()
+
 start = datetime.datetime.now()
+print(message)
 e_message = aes.encrypt(message)
-print(e_message)
+print("e:",e_message)
 d_message = aes.decrypt(e_message)
-print(d_message)
+print("d:",d_message)
 end = datetime.datetime.now()
 print(end - start)
 
