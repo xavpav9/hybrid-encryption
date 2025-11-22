@@ -1,4 +1,5 @@
-import socket, random
+import socket, random, readline, os
+from threading import Thread
 
 aes = __import__("aes-encryption")
 rsa = __import__("rsa-encryption")
@@ -10,14 +11,16 @@ def format_message(message, header_size):
     return f"{len(bytes_message):<{header_size}}".encode(encoding="utf-8") + bytes_message
 
 class Client:
-    def __init__(self, ip, port, bits_per_prime=256):
+    def __init__(self, ip, port, username, bits_per_prime=256):
         self.header_size = 5
+        self.username = username
 
         self.generate_rsa_key_pair(bits_per_prime)
 
         self.connect_socket(ip, port)
 
     def connect_socket(self, ip, port):
+        print("Connecting to socket ... ", end="", flush=True)
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
         self.sock.connect((ip, port))
@@ -32,8 +35,9 @@ class Client:
         self.aesEncryption = aes.AesEncryption(aes_key, bits_per_char)
         self.sock_pub = rsa.RsaPublic(conn_e, conn_n)
 
-        received_msg = self.aesEncryption.encrypt("aes key received")
-        self.sock.send(format_message(received_msg, self.header_size))
+        self.send_message("aes key received")
+        self.send_message(self.username)
+        print("done\n")
 
     def generate_rsa_key_pair(self, bits):
         rsaEncryption = rsa.RsaEncryption(8)
@@ -58,18 +62,42 @@ class Client:
         e_message = self.aesEncryption.encrypt(message)
         self.sock.send(format_message(e_message, self.header_size))
 
-def main():
-    client = Client("127.0.0.1", 2801, 512)
+def main(client, messages):
     while True:
         message = input("> ")
+        messages.append({"username": client.username, "message": message})
+        reprint_screen(messages)
         client.send_message(message)
-        message_from_server = client.receive_message()
-        if message_from_server == False:
-            print("exiting...")
-            break
-        else:
-            print(message_from_server)
     client.sock.close()
 
+def output_messages(client, messages):
+    while True:
+        other_username = client.receive_message()
+        if other_username == False:
+            print("Disconnected from server")
+            break
+        other_message = client.receive_message()
+        if other_message == False:
+            print("Disconnected from server")
+            break
+        else:
+            messages.append({"username": other_username, "message": other_message})
+            current_line = readline.get_line_buffer()
+            reprint_screen(messages)
+            print("> " + current_line, end="", flush=True)
+
+def reprint_screen(messages):
+    os.system("clear")
+    for message_data in messages:
+        print(f"{message_data['username']}> {message_data['message']}")
+
 if __name__ == "__main__":
-    main()
+    messages = []
+    username = input("Enter username: ")
+    client = Client("127.0.0.1", 2800, username, 512)
+    running = True
+    t1 = Thread(target=output_messages, args=[client, messages,])
+    t1.start()
+    main(client, messages)
+    t1.join()
+    client.sock.close()

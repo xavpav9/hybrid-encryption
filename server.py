@@ -60,7 +60,12 @@ class Server:
         if received_msg != valid_received_msg:
             self.remove_conn(conn)
         else:
-            print("valid")
+            print("valid connection")
+
+        username = self.receive_message(conn)
+        self.conn_information[conn]["username"] = username
+        print(username)
+
             
     def remove_conn(self, conn):
         conn.shutdown(socket.SHUT_RDWR)
@@ -81,17 +86,20 @@ class Server:
 
     def distribute_message(self, conn, message):
         print(f"\nNew message from {conn}: ({message})")
+        username = self.conn_information[conn]["username"]
+        print(username)
         for other_conn in self.conns:
             if other_conn != conn and other_conn != self.sock:
                 e_message = self.conn_information[other_conn]["aes"].encrypt(message)
-                other_conn.send(format_message(e_message, self.header_size))
+                e_username = self.conn_information[other_conn]["aes"].encrypt(username)
+                other_conn.send(format_message(e_username, self.header_size) + format_message(e_message, self.header_size))
                 print(f"To {other_conn}: {e_message}")
 
 def format_message(message, header_size):
     bytes_message = str(message).encode(encoding="utf-8")
     return f"{len(bytes_message):<{header_size}}".encode(encoding="utf-8") + bytes_message
 
-server = Server("0.0.0.0", 2801, 1024, 8)
+server = Server("0.0.0.0", 2800, 256, 8)
 while True:
     conns_to_read, _, conns_in_error = select(server.conns,server. conns,server. conns)
     for conn in conns_in_error:
