@@ -63,8 +63,21 @@ class Server:
             print("valid connection")
 
         username = self.receive_message(conn)
-        self.conn_information[conn]["username"] = username
-        print(username)
+        usernames_in_use = [self.conn_information[other_conn]["username"] for other_conn in self.conn_information if other_conn != conn]
+        conn.send(format_message(aes_obj.encrypt("s"), self.header_size))
+        if username in usernames_in_use:
+            conn.send(format_message(aes_obj.encrypt(f"usernames in use: {','.join(usernames_in_use)}"), self.header_size))
+            self.remove_conn(conn)
+        elif len(username) != len(username.strip()):
+            conn.send(format_message(aes_obj.encrypt(f"no trailing or leading spaces in name"), self.header_size))
+            self.remove_conn(conn)
+        elif len(username) < 3:
+            conn.send(format_message(aes_obj.encrypt(f"username must be at least 3 characters long"), self.header_size))
+            self.remove_conn(conn)
+        else:
+            self.conn_information[conn]["username"] = username
+            conn.send(format_message(aes_obj.encrypt(f"connected to server"), self.header_size))
+            print("valid username")
 
             
     def remove_conn(self, conn):
@@ -87,7 +100,6 @@ class Server:
     def distribute_message(self, conn, message):
         print(f"\nNew message from {conn}: ({message})")
         username = self.conn_information[conn]["username"]
-        print(username)
         for other_conn in self.conns:
             if other_conn != conn and other_conn != self.sock:
                 e_message = self.conn_information[other_conn]["aes"].encrypt(message)
@@ -99,7 +111,7 @@ def format_message(message, header_size):
     bytes_message = str(message).encode(encoding="utf-8")
     return f"{len(bytes_message):<{header_size}}".encode(encoding="utf-8") + bytes_message
 
-server = Server("0.0.0.0", 2800, 256, 8)
+server = Server("0.0.0.0", 2801, 256, 8)
 while True:
     conns_to_read, _, conns_in_error = select(server.conns,server. conns,server. conns)
     for conn in conns_in_error:
