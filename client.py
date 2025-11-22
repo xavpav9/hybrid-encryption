@@ -64,7 +64,11 @@ class Client:
 
 def main(client, messages):
     while True:
-        message = input("> ")
+        try:
+            message = input("\n> ")
+        except:
+            print("Disconnected. You might need to press <C-c> to quit.")
+            break
         messages.append({"username": client.username, "message": message})
         reprint_screen(messages)
         client.send_message(message)
@@ -76,6 +80,7 @@ def output_messages(client, messages):
         if other_username == False:
             print("Disconnected from server")
             break
+
         other_message = client.receive_message()
         if other_message == False:
             print("Disconnected from server")
@@ -84,7 +89,7 @@ def output_messages(client, messages):
             messages.append({"username": other_username, "message": other_message})
             current_line = readline.get_line_buffer()
             reprint_screen(messages)
-            print("> " + current_line, end="", flush=True)
+            print("\n> " + current_line, end="", flush=True)
 
 def reprint_screen(messages):
     os.system("clear")
@@ -94,10 +99,12 @@ def reprint_screen(messages):
 if __name__ == "__main__":
     messages = []
     username = input("Enter username: ")
-    client = Client("127.0.0.1", 2801, username, 512)
-    running = True
+    client = Client("127.0.0.1", 2800, username, 512)
     t1 = Thread(target=output_messages, args=[client, messages,])
     t1.start()
     main(client, messages)
-    t1.join()
+    try:
+        t1.join()
+    except:
+        pass
     client.sock.close()

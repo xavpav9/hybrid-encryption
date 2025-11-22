@@ -40,7 +40,7 @@ class Server:
     def accept_connection(self):
         conn, addr = self.sock.accept()
         self.conns.append(conn)
-        print(conn, addr)
+        print(f"\n\nNew connection {conn}, {addr}")
 
         conn_e = int(self.receive_message(conn, False))
         conn_n = int(self.receive_message(conn, False))
@@ -56,11 +56,10 @@ class Server:
 
         valid_received_msg = "aes key received"
         received_msg = self.receive_message(conn)
-        print(received_msg)
         if received_msg != valid_received_msg:
             self.remove_conn(conn)
         else:
-            print("valid connection")
+            print(f"valid connection using aes key: {aes_key}")
 
         username = self.receive_message(conn)
         usernames_in_use = [self.conn_information[other_conn]["username"] for other_conn in self.conn_information if other_conn != conn]
@@ -77,7 +76,7 @@ class Server:
         else:
             self.conn_information[conn]["username"] = username
             conn.send(format_message(aes_obj.encrypt(f"connected to server"), self.header_size))
-            print("valid username")
+            print(f"valid username: {username}")
 
             
     def remove_conn(self, conn):
@@ -98,20 +97,21 @@ class Server:
             return conn.recv(length).decode(encoding="utf-8")
 
     def distribute_message(self, conn, message):
-        print(f"\nNew message from {conn}: ({message})")
+        print(f"\n\nNew message from {self.conn_information[conn]['username']} ({conn}): ({message})")
         username = self.conn_information[conn]["username"]
         for other_conn in self.conns:
             if other_conn != conn and other_conn != self.sock:
                 e_message = self.conn_information[other_conn]["aes"].encrypt(message)
                 e_username = self.conn_information[other_conn]["aes"].encrypt(username)
                 other_conn.send(format_message(e_username, self.header_size) + format_message(e_message, self.header_size))
-                print(f"To {other_conn}: {e_message}")
+                print(f"To {self.conn_information[other_conn]['username']} ({other_conn})")
+                print(f"as: {e_message}")
 
 def format_message(message, header_size):
     bytes_message = str(message).encode(encoding="utf-8")
     return f"{len(bytes_message):<{header_size}}".encode(encoding="utf-8") + bytes_message
 
-server = Server("0.0.0.0", 2801, 256, 8)
+server = Server("0.0.0.0", 2800, 256, 8)
 while True:
     conns_to_read, _, conns_in_error = select(server.conns,server. conns,server. conns)
     for conn in conns_in_error:
