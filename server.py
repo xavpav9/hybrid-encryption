@@ -4,9 +4,10 @@ aes = __import__("aes-encryption")
 rsa = __import__("rsa-encryption")
 
 class Server:
-    def __init__(self, ip, port, bits_per_prime=256):
+    def __init__(self, ip, port, bits_per_prime=256, bits_per_char=8):
         self.header_size = 5
 
+        self.bits_per_char = bits_per_char
         self.generate_rsa_key_pair(bits_per_prime)
 
         self.initiate_socket(ip, port)
@@ -22,10 +23,10 @@ class Server:
         self.conns = [self.sock]
         self.conn_information = {}
 
-    def generate_rsa_key_pair(self, bits):
-        rsaEncryption = rsa.RsaEncryption(8)
+    def generate_rsa_key_pair(self, bits_per_prime):
+        rsaEncryption = rsa.RsaEncryption(self.bits_per_char)
         print("Generating keys ... ", end="", flush=True)
-        rsaEncryption.generate_keys(bits)
+        rsaEncryption.generate_keys(bits_per_prime)
         print("done\n")
         [self.pub, self.priv] = rsaEncryption.generate_classes()
 
@@ -45,12 +46,12 @@ class Server:
         conn_n = int(self.receive_message(conn, False))
         aes_key = self.generate_aes_key()
 
-        aes_obj = aes.AesEncryption(aes_key, 8)
+        aes_obj = aes.AesEncryption(aes_key, self.bits_per_char)
         rsa_obj = rsa.RsaPublic(conn_n, conn_e, 8)
         self.conn_information[conn] = {"rsa": rsa_obj,
                                        "aes": aes_obj }
 
-        conn.send(format_message(self.pub.e, self.header_size) + format_message(self.pub.n, self.header_size))
+        conn.send(format_message(self.pub.e, self.header_size) + format_message(self.pub.n, self.header_size) + format_message(self.bits_per_char, self.header_size))
         conn.send(format_message(rsa_obj.encrypt(aes_key), self.header_size))
 
         valid_received_msg = "aes key received"
@@ -90,7 +91,7 @@ def format_message(message, header_size):
     bytes_message = str(message).encode(encoding="utf-8")
     return f"{len(bytes_message):<{header_size}}".encode(encoding="utf-8") + bytes_message
 
-server = Server("0.0.0.0", 2801, 1024)
+server = Server("0.0.0.0", 2801, 1024, 8)
 while True:
     conns_to_read, _, conns_in_error = select(server.conns,server. conns,server. conns)
     for conn in conns_in_error:

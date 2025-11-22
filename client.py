@@ -26,9 +26,10 @@ class Client:
 
         conn_e = int(self.receive_message(False))
         conn_n = int(self.receive_message(False))
+        bits_per_char = int(self.receive_message(False))
         aes_key = self.priv.decrypt(self.receive_message(False))
 
-        self.aesEncryption = aes.AesEncryption(aes_key, 8)
+        self.aesEncryption = aes.AesEncryption(aes_key, bits_per_char)
         self.sock_pub = rsa.RsaPublic(conn_e, conn_n)
 
         received_msg = self.aesEncryption.encrypt("aes key received")
