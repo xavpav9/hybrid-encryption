@@ -30,7 +30,7 @@ class Client:
         conn_e = int(self.receive_message(False))
         conn_n = int(self.receive_message(False))
         bits_per_char = int(self.receive_message(False))
-        aes_key = self.priv.decrypt(self.receive_message(False))
+        aes_key = self.priv.decrypt(self.receive_message(False))[:16] # in case of chr(0) - this will only happen if rsa keys are changed from 8
 
         self.aesEncryption = aes.AesEncryption(aes_key, bits_per_char)
         self.sock_pub = rsa.RsaPublic(conn_e, conn_n)
@@ -99,7 +99,7 @@ def reprint_screen(messages):
 if __name__ == "__main__":
     messages = []
     username = input("Enter username: ")
-    client = Client("127.0.0.1", 2801, username, 512)
+    client = Client("127.0.0.1", 2800, username, 512)
     t1 = Thread(target=output_messages, args=[client, messages,])
     t1.start()
     main(client, messages)

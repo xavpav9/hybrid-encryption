@@ -96,7 +96,7 @@ class Server:
         length = int(length)
 
         if aes_decrypt:
-            return self.conn_information[conn]["aes"].decrypt(conn.recv(length).decode(encoding="utf-8"))
+            return self.conn_information[conn]["aes"].decrypt(conn.recv(length).decode(encoding="utf-8")).strip(chr(0))
         else:
             return conn.recv(length).decode(encoding="utf-8")
 
@@ -128,7 +128,7 @@ def get_hex_from_chars(chars):
 
     return hex
 
-server = Server("0.0.0.0", 2801, 256, 32)
+server = Server("0.0.0.0", 2800, 256, 32)
 while True:
     conns_to_read, _, conns_in_error = select(server.conns,server. conns,server. conns)
     for conn in conns_in_error:

@@ -95,7 +95,6 @@ class RsaEncryption:
             for i in range(0, len(binary), self.bits_per_letter):
                 bit_pattern = binary[i:i + self.bits_per_letter]
                 denary = int(bit_pattern, 2)
-                if denary == 0: break
                 current_message += chr(denary)
 
 
