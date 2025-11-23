@@ -194,7 +194,7 @@ class AesEncryption:
                 decrypted_data += chr(int(decrypted_part[o:o+self.bits_per_letter], 2))
 
 
-        return decrypted_data
+        return decrypted_data.strip(chr(0))
 
 if __name__ == "__main__":
     aes = AesEncryption("aesEncryptionKey", 8)

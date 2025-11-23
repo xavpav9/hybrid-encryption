@@ -99,7 +99,7 @@ def reprint_screen(messages):
 if __name__ == "__main__":
     messages = []
     username = input("Enter username: ")
-    client = Client("127.0.0.1", 2800, username, 512)
+    client = Client("127.0.0.1", 2801, username, 512)
     t1 = Thread(target=output_messages, args=[client, messages,])
     t1.start()
     main(client, messages)
