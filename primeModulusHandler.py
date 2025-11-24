@@ -20,6 +20,16 @@ class PrimeModulusHandler:
 
         return binary.zfill(zerofill)
 
+    def get_hex_from_chars(self, chars):
+        table = {0:"0", 1:"1", 2:"2", 3:"3", 4:"4", 5:"5", 6:"6", 7:"7", 8:"8", 9:"9", 10:"a", 11:"b", 12:"c", 13:"d", 14:"e", 15:"f"}
+        hex = ""
+        for char in chars:
+            denary = ord(char)
+            hex += table[denary // 16]
+            hex += table[denary % 16]
+
+        return hex
+
     def number_of_bits(self, denary):
         if denary == 0: return 1
         else: total_bits = 0

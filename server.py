@@ -1,5 +1,6 @@
 import socket, random
 from select import select
+from primeModulusHandler import PrimeModulusHandler
 aes = __import__("aes-encryption")
 rsa = __import__("rsa-encryption")
 
@@ -11,6 +12,8 @@ class Server:
         self.generate_rsa_key_pair(bits_per_prime)
 
         self.initiate_socket(ip, port)
+
+        self._primeModulusHandler = PrimeModulusHandler()
 
     def initiate_socket(self, ip, port):
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -57,10 +60,10 @@ class Server:
         valid_received_msg = "aes key received"
         received_msg = self.receive_message(conn)
         if received_msg != valid_received_msg:
-            print(f"-> invalid connection using aes key (in hex): {get_hex_from_chars(aes_key)}")
+            print(f"-> invalid connection using aes key (in hex): {self._primeModulusHandler.get_hex_from_chars(aes_key)}")
             self.remove_conn(conn)
         else:
-            print(f"-> valid connection using aes key (in hex): {get_hex_from_chars(aes_key)}")
+            print(f"-> valid connection using aes key (in hex): {self._primeModulusHandler.get_hex_from_chars(aes_key)}")
 
         username = self.receive_message(conn)
         usernames_in_use = [self.conn_information[other_conn]["username"] for other_conn in self.conn_information if other_conn != conn]
@@ -104,7 +107,7 @@ class Server:
         message = self.conn_information[conn]["aes"].decrypt(encrypted_message)
         username = self.conn_information[conn]["username"]
         print(f"\n\nNew message from {self.conn_information[conn]['username']} ({conn})")
-        print(f"-> Original encrypted message (in hex): {get_hex_from_chars(encrypted_message)}")
+        print(f"-> Original encrypted message (in hex): {self._primeModulusHandler.get_hex_from_chars(encrypted_message)}")
         print(f"-> Decrypted message (in chars): {message}")
         for other_conn in self.conns:
             if other_conn != conn and other_conn != self.sock:
@@ -112,23 +115,13 @@ class Server:
                 e_username = self.conn_information[other_conn]["aes"].encrypt(username)
                 other_conn.send(format_message(e_username, self.header_size) + format_message(e_message, self.header_size))
                 print(f"To {self.conn_information[other_conn]['username']} ({other_conn})")
-                print(f"-> New encrypted message (in hex): {get_hex_from_chars(e_message)}")
+                print(f"-> New encrypted message (in hex): {self._primeModulusHandler.get_hex_from_chars(e_message)}")
 
 def format_message(message, header_size):
     bytes_message = str(message).encode(encoding="utf-8")
     return f"{len(bytes_message):<{header_size}}".encode(encoding="utf-8") + bytes_message
 
-def get_hex_from_chars(chars):
-    table = {0:"0", 1:"1", 2:"2", 3:"3", 4:"4", 5:"5", 6:"6", 7:"7", 8:"8", 9:"9", 10:"a", 11:"b", 12:"c", 13:"d", 14:"e", 15:"f"}
-    hex = ""
-    for char in chars:
-        denary = ord(char)
-        hex += table[denary // 16]
-        hex += table[denary % 16]
-
-    return hex
-
-server = Server("0.0.0.0", 2800, 256, 32)
+server = Server("0.0.0.0", 2800, 1024, 32)
 while True:
     conns_to_read, _, conns_in_error = select(server.conns,server. conns,server. conns)
     for conn in conns_in_error:
