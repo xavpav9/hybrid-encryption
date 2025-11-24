@@ -2,6 +2,9 @@ import socket, random, readline, os, sys
 from threading import Thread
 from primeModulusHandler import PrimeModulusHandler
 
+clear_message = "clear"
+if os.name == "posix": clear_message = "cls"
+
 aes = __import__("aes-encryption")
 rsa = __import__("rsa-encryption")
 
@@ -69,7 +72,7 @@ class Client:
         length = int(length)
 
         if aes_decrypt:
-            return self.aesEncryption.decrypt(self.sock.recv(length).decode(encoding="utf-8"))
+            return self.aesEncryption.decrypt(self.sock.recv(length).decode(encoding="utf-8")).strip(chr(0))
         else:
             return self.sock.recv(length).decode(encoding="utf-8")
     
@@ -108,7 +111,7 @@ def output_messages(client, messages):
             print(f"\n{client.username}> " + current_line, end="", flush=True)
 
 def reprint_screen(messages):
-    os.system("clear")
+    os.system(clear_message)
     for message_data in messages:
         print(f"{message_data['username']}> {message_data['message']}")
 

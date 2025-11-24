@@ -113,7 +113,7 @@ class RsaPublic(RsaEncryption):
         return super().encrypt(message, self.n, self.e)
 
     def decrypt(self, message):
-        return super().decrypt(message, self.n, self.e)
+        return super().decrypt(message, self.n, self.e).strip(chr(0))
 
 class RsaPrivate(RsaEncryption):
     def __init__(self, n, d, encoding=8):
@@ -126,7 +126,7 @@ class RsaPrivate(RsaEncryption):
         return super().encrypt(message, self.n, self.d)
 
     def decrypt(self, message):
-        return super().decrypt(message, self.n, self.d)
+        return super().decrypt(message, self.n, self.d).strip(chr(0))
 
 
 
