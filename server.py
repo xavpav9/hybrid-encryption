@@ -59,7 +59,7 @@ class Server:
             aes_key += chr(ord(client_random[i]) ^ ord(server_random[i]) ^ ord(premaster_secret[i]))
 
         aes_obj = aes.AesEncryption(aes_key, self.bits_per_char)
-        self.conn_information[conn] = { "aes": aes_obj }
+        self.conn_information[conn] = { "aes": aes_obj, "addr": addr }
         conn.send(format_message(aes_obj.encrypt("finished"), self.header_size))
 
         confirmation_msg = self.receive_message(conn)
@@ -92,6 +92,7 @@ class Server:
 
             
     def remove_conn(self, conn):
+        print(f"\n\nRemoved connection {self.conn_information[conn]['username']} {conn}, {self.conn_information[conn]['addr']}.")
         conn.shutdown(socket.SHUT_RDWR)
         conn.close()
         self.conns.remove(conn)
@@ -126,7 +127,7 @@ def format_message(message, header_size):
     bytes_message = str(message).encode(encoding="utf-8")
     return f"{len(bytes_message):<{header_size}}".encode(encoding="utf-8") + bytes_message
 
-server = Server("0.0.0.0", 2800, 256, 32)
+server = Server("0.0.0.0", 2800, 1024, 32)
 while True:
     conns_to_read, _, conns_in_error = select(server.conns,server. conns,server. conns)
 
