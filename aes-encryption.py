@@ -14,6 +14,9 @@ class AesEncryption:
         except:
             raise Exception("Invalid AesEncryption instantiation - pick a value of bits from 8, 16, 32")
 
+        if len(key) != 16:
+            raise Exception("Invalid AesEncryption instantiation - length of key must be 16 characters.")
+
         self.set_key(key)
 
         self.sbox = {}
