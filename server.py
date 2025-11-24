@@ -127,7 +127,7 @@ def format_message(message, header_size):
     bytes_message = str(message).encode(encoding="utf-8")
     return f"{len(bytes_message):<{header_size}}".encode(encoding="utf-8") + bytes_message
 
-server = Server("0.0.0.0", 2800, 1024, 32)
+server = Server("0.0.0.0", 2801, 1024, 32)
 while True:
     conns_to_read, _, conns_in_error = select(server.conns,server. conns,server. conns)
 
