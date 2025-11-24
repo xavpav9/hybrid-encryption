@@ -89,14 +89,16 @@ class Server:
             self.conn_information[conn]["username"] = username
             conn.send(format_message(aes_obj.encrypt(f"connected to server"), self.header_size))
             print(f"-> valid username: {username}")
+            self.distribute_message(conn, aes_obj.encrypt(f"{username} has joined"), True)
 
-            
     def remove_conn(self, conn):
         print(f"\n\nRemoved connection {self.conn_information[conn]['username']} {conn}, {self.conn_information[conn]['addr']}.")
-        conn.shutdown(socket.SHUT_RDWR)
-        conn.close()
+        self.distribute_message(conn, self.conn_information[conn]["aes"].encrypt(f"{self.conn_information[conn]["username"]} has left"), True)
+
         self.conns.remove(conn)
         self.conn_information.pop(conn)
+        conn.shutdown(socket.SHUT_RDWR)
+        conn.close()
 
     def receive_message(self, conn, aes_decrypt=True):
         length = conn.recv(self.header_size).decode(encoding="utf-8").strip()
@@ -109,19 +111,24 @@ class Server:
         else:
             return conn.recv(length).decode(encoding="utf-8")
 
-    def distribute_message(self, conn, encrypted_message):
+    def distribute_message(self, conn, encrypted_message, from_server=False):
         message = self.conn_information[conn]["aes"].decrypt(encrypted_message)
-        username = self.conn_information[conn]["username"]
-        print(f"\n\nNew message from {self.conn_information[conn]['username']} ({conn})")
-        print(f"-> Original encrypted message (in hex): {self._primeModulusHandler.get_hex_from_chars(encrypted_message)}")
-        print(f"-> Decrypted message (in chars): {message}")
+        if not from_server:
+            username = self.conn_information[conn]["username"]
+            print(f"\n\nNew message from {self.conn_information[conn]['username']} ({conn})")
+            print(f"-> Original encrypted message (in hex): {self._primeModulusHandler.get_hex_from_chars(encrypted_message)}")
+            print(f"-> Decrypted message (in chars): {message}")
+        else:
+            username = "s"
+
         for other_conn in self.conns:
             if other_conn != conn and other_conn != self.sock:
                 e_message = self.conn_information[other_conn]["aes"].encrypt(message)
                 e_username = self.conn_information[other_conn]["aes"].encrypt(username)
                 other_conn.send(format_message(e_username, self.header_size) + format_message(e_message, self.header_size))
-                print(f"To {self.conn_information[other_conn]['username']} ({other_conn})")
-                print(f"-> New encrypted message (in hex): {self._primeModulusHandler.get_hex_from_chars(e_message)}")
+                if not from_server:
+                    print(f"To {self.conn_information[other_conn]['username']} ({other_conn})")
+                    print(f"-> New encrypted message (in hex): {self._primeModulusHandler.get_hex_from_chars(e_message)}")
 
 def format_message(message, header_size):
     bytes_message = str(message).encode(encoding="utf-8")

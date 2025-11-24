@@ -3,7 +3,7 @@ from threading import Thread
 from primeModulusHandler import PrimeModulusHandler
 
 clear_message = "clear"
-if os.name == "posix": clear_message = "cls"
+if os.name == "nt": clear_message = "cls"
 
 aes = __import__("aes-encryption")
 rsa = __import__("rsa-encryption")
