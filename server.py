@@ -15,6 +15,13 @@ class Server:
 
         self._primeModulusHandler = PrimeModulusHandler()
 
+    def generate_aes_key(self):
+        key = ""
+        for i in range(16):
+            key += chr(random.randint(0, 255))
+
+        return key
+
     def initiate_socket(self, ip, port):
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
@@ -27,41 +34,39 @@ class Server:
         self.conn_information = {}
 
     def generate_rsa_key_pair(self, bits_per_prime):
-        rsaEncryption = rsa.RsaEncryption(self.bits_per_char)
+        rsaEncryption = rsa.RsaEncryption(8)
         print("Generating keys ... ", end="", flush=True)
         rsaEncryption.generate_keys(bits_per_prime)
         print("done\n")
         [self.pub, self.priv] = rsaEncryption.generate_classes()
 
-    def generate_aes_key(self):
-        key = ""
-        for i in range(16):
-            key += chr(random.randint(0, 255))
-
-        return key
-
     def accept_connection(self):
         conn, addr = self.sock.accept()
         self.conns.append(conn)
         print(f"\n\nNew connection {conn}, {addr}")
+        server_random = self.generate_aes_key()
 
-        conn_e = int(self.receive_message(conn, False))
-        conn_n = int(self.receive_message(conn, False))
-        aes_key = self.generate_aes_key()
+
+        client_random = self.receive_message(conn, False)
+        conn.send(format_message(self.pub.e, self.header_size))
+        conn.send(format_message(self.pub.n, self.header_size))
+        conn.send(format_message(self.bits_per_char, self.header_size))
+        conn.send(format_message(server_random, self.header_size))
+        premaster_secret = self.priv.decrypt(self.receive_message(conn, False))
+
+        aes_key = ""
+        for i in range(16):
+            aes_key += chr(ord(client_random[i]) ^ ord(server_random[i]) ^ ord(premaster_secret[i]))
 
         aes_obj = aes.AesEncryption(aes_key, self.bits_per_char)
-        rsa_obj = rsa.RsaPublic(conn_n, conn_e, 8)
-        self.conn_information[conn] = {"rsa": rsa_obj,
-                                       "aes": aes_obj }
+        self.conn_information[conn] = { "aes": aes_obj }
+        conn.send(format_message(aes_obj.encrypt("finished"), self.header_size))
 
-        conn.send(format_message(self.pub.e, self.header_size) + format_message(self.pub.n, self.header_size) + format_message(self.bits_per_char, self.header_size))
-        conn.send(format_message(rsa_obj.encrypt(aes_key), self.header_size))
-
-        valid_received_msg = "aes key received"
-        received_msg = self.receive_message(conn)
-        if received_msg != valid_received_msg:
+        confirmation_msg = self.receive_message(conn)
+        if confirmation_msg != "finished":
             print(f"-> invalid connection using aes key (in hex): {self._primeModulusHandler.get_hex_from_chars(aes_key)}")
             self.remove_conn(conn)
+            return
         else:
             print(f"-> valid connection using aes key (in hex): {self._primeModulusHandler.get_hex_from_chars(aes_key)}")
 
@@ -121,9 +126,10 @@ def format_message(message, header_size):
     bytes_message = str(message).encode(encoding="utf-8")
     return f"{len(bytes_message):<{header_size}}".encode(encoding="utf-8") + bytes_message
 
-server = Server("0.0.0.0", 2800, 1024, 32)
+server = Server("0.0.0.0", 2800, 256, 32)
 while True:
     conns_to_read, _, conns_in_error = select(server.conns,server. conns,server. conns)
+
     for conn in conns_in_error:
         server.remove_conn(conn)
 

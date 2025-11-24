@@ -1,5 +1,6 @@
-import socket, random, readline, os
+import socket, random, readline, os, sys
 from threading import Thread
+from primeModulusHandler import PrimeModulusHandler
 
 aes = __import__("aes-encryption")
 rsa = __import__("rsa-encryption")
@@ -11,13 +12,18 @@ def format_message(message, header_size):
     return f"{len(bytes_message):<{header_size}}".encode(encoding="utf-8") + bytes_message
 
 class Client:
-    def __init__(self, ip, port, username, bits_per_prime=256):
+    def __init__(self, ip, port, username):
         self.header_size = 5
         self.username = username
 
-        self.generate_rsa_key_pair(bits_per_prime)
-
         self.connect_socket(ip, port)
+
+    def generate_aes_key(self):
+        key = ""
+        for i in range(16):
+            key += chr(random.randint(0, 255))
+
+        return key
 
     def connect_socket(self, ip, port):
         print("Connecting to socket ... ", end="", flush=True)
@@ -25,26 +31,36 @@ class Client:
 
         self.sock.connect((ip, port))
 
-        self.sock.send(format_message(self.pub.e, self.header_size) + format_message(self.pub.n, self.header_size))
+        client_random = self.generate_aes_key()
+        self.sock.send(format_message(client_random, self.header_size))
 
         conn_e = int(self.receive_message(False))
         conn_n = int(self.receive_message(False))
         bits_per_char = int(self.receive_message(False))
-        aes_key = self.priv.decrypt(self.receive_message(False))[:16] # in case of chr(0) - this will only happen if rsa keys are changed from 8
+        server_random = self.receive_message(False)
+
+        premaster_secret = self.generate_aes_key()
+
+        aes_key = ""
+        for i in range(16):
+            aes_key += chr(ord(client_random[i]) ^ ord(server_random[i]) ^ ord(premaster_secret[i]))
 
         self.aesEncryption = aes.AesEncryption(aes_key, bits_per_char)
-        self.sock_pub = rsa.RsaPublic(conn_e, conn_n)
+        self.sock_pub = rsa.RsaPublic(conn_n, conn_e, 8)
 
-        self.send_message("aes key received")
+
+        self.sock.send(format_message(self.sock_pub.encrypt(premaster_secret), self.header_size))
+
+        self.send_message("finished")
         self.send_message(self.username)
-        print("done\n")
 
-    def generate_rsa_key_pair(self, bits):
-        rsaEncryption = rsa.RsaEncryption(8)
-        print("Generating keys ... ", end="", flush=True)
-        rsaEncryption.generate_keys(bits)
+        confirmation_msg = self.receive_message()
+        if confirmation_msg != "finished":
+            print("invalid connection\n")
+            self.sock.close()
+            sys.exit()
+        
         print("done\n")
-        [self.pub, self.priv] = rsaEncryption.generate_classes()
 
     def receive_message(self, aes_decrypt=True):
         length = self.sock.recv(self.header_size).decode(encoding="utf-8").strip()
@@ -99,7 +115,7 @@ def reprint_screen(messages):
 if __name__ == "__main__":
     messages = []
     username = input("Enter username: ")
-    client = Client("127.0.0.1", 2800, username, 512)
+    client = Client("127.0.0.1", 2800, username)
     t1 = Thread(target=output_messages, args=[client, messages,])
     t1.start()
     main(client, messages)
