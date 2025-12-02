@@ -93,7 +93,7 @@ class Server:
 
     def remove_conn(self, conn):
         print(f"\n\nRemoved connection {self.conn_information[conn]['username']} {conn}, {self.conn_information[conn]['addr']}.")
-        self.distribute_message(conn, self.conn_information[conn]["aes"].encrypt(f"{self.conn_information[conn]["username"]} has left"), True)
+        self.distribute_message(conn, self.conn_information[conn]["aes"].encrypt(f"{self.conn_information[conn]['username']} has left"), True)
 
         self.conns.remove(conn)
         self.conn_information.pop(conn)
